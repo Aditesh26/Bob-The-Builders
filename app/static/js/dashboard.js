@@ -15,6 +15,7 @@ let cityMap = null;
 let mapMarkers = [];
 let sidebarCollapsed = false;
 let currentPage = 'command-center';
+let searchableItems = []; // Global search index
 
 const PAGE_TITLES = {
     'command-center': 'Command Center <span>/ Infrastructure Overview</span>',
@@ -61,6 +62,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initSidebar();
     initClock();
     initMap();
+    initSearch(); // Initialize search listener
     await loadAllData();
     startAutoRefresh();
 });
@@ -167,6 +169,18 @@ async function loadAllData() {
         api.getRoadHealth(),
         api.getBridgeHealth(),
     ]);
+
+    // Populate search index
+    searchableItems = [];
+    if (nodes) nodes.forEach(n => searchableItems.push({ ...n, type: 'node', label: n.name, sub: n.id }));
+    if (alerts) alerts.forEach(a => searchableItems.push({ ...a, type: 'alert', label: a.title, sub: a.message }));
+    // We can also add zones if we had the raw list here, but 'nodes' covers most locations
+    // Add navigation pages to search
+    Object.entries(PAGE_TITLES).forEach(([key, val]) => {
+        // Strip HTML span
+        const cleanTitle = val.replace(/<[^>]*>/g, ' ').replace('  ', ' - ');
+        searchableItems.push({ type: 'page', id: key, label: cleanTitle, sub: 'Navigation' });
+    });
 
     if (kpis) renderKPIs(kpis);
     if (rainfall) renderChart('rainfall-chart', rainfall, 'Rainfall', '#06d6a0', 'rgba(6,214,160,0.1)');
@@ -1156,3 +1170,120 @@ function renderBridgeTable(bridges) {
         `;
     }).join('');
 }
+
+// ─── SEARCH FUNCTIONALITY ───────────────────────────────────────────
+function initSearch() {
+    const searchInput = document.getElementById('global-search');
+    if (!searchInput) return;
+
+    // Create dropdown container
+    const dropdown = document.createElement('div');
+    dropdown.className = 'search-dropdown';
+    dropdown.id = 'search-results';
+    dropdown.style.display = 'none';
+    searchInput.parentNode.appendChild(dropdown);
+
+    searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase().trim();
+        if (query.length < 2) {
+            dropdown.style.display = 'none';
+            return;
+        }
+        performSearch(query, dropdown);
+    });
+
+    // Close on click outside
+    document.addEventListener('click', (e) => {
+        if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.style.display = 'none';
+        }
+    });
+
+    // Open if clicking back into input with value
+    searchInput.addEventListener('focus', () => {
+        if (searchInput.value.trim().length >= 2) {
+            dropdown.style.display = 'block';
+        }
+    });
+}
+
+function performSearch(query, dropdown) {
+    // Filter items
+    const results = searchableItems.filter(item => {
+        const matchLabel = item.label && item.label.toLowerCase().includes(query);
+        const matchSub = item.sub && item.sub.toLowerCase().includes(query);
+        const matchId = item.id && String(item.id).toLowerCase().includes(query);
+        return matchLabel || matchSub || matchId;
+    }).slice(0, 8); // Limit to 8 results
+
+    if (results.length === 0) {
+        dropdown.innerHTML = '<div class="search-no-results">No results found</div>';
+        dropdown.style.display = 'block';
+        return;
+    }
+
+    dropdown.innerHTML = results.map(item => {
+        let icon = 'search';
+        if (item.type === 'node') icon = 'map-pin';
+        if (item.type === 'alert') icon = 'alert-triangle';
+        if (item.type === 'page') icon = 'layout';
+
+        return `
+            <div class="search-result-item" onclick="handleSearchResultClick('${item.type}', '${item.id}')">
+                <div class="result-icon"><i data-lucide="${icon}"></i></div>
+                <div class="result-content">
+                    <div class="result-title">${item.label}</div>
+                    <div class="result-sub">${item.sub}</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    dropdown.style.display = 'block';
+    initLucideIcons();
+}
+
+window.handleSearchResultClick = function (type, id) {
+    const dropdown = document.getElementById('search-results');
+    if (dropdown) dropdown.style.display = 'none';
+    document.getElementById('global-search').value = '';
+
+    if (type === 'page') {
+        navigateToPage(id);
+    } else if (type === 'node') {
+        navigateToPage('drainage');
+        // Ideally scroll to table row
+        setTimeout(() => {
+            // Highlight table row if exists
+            // We need to wait for table render if not already rendered? 
+            // navigateToPage calls loadAllData/etc if needed but we might be already there.
+
+            // Try to find the row text
+            const rows = document.querySelectorAll('#drainage-tbody tr');
+            let found = false;
+            rows.forEach(r => {
+                if (r.innerHTML.includes(id)) {
+                    r.style.transition = 'background-color 0.5s';
+                    r.style.backgroundColor = 'rgba(6, 214, 160, 0.2)';
+                    r.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    setTimeout(() => r.style.backgroundColor = '', 2000);
+                    found = true;
+                }
+            });
+
+            if (!found) {
+                // Check map markers
+                const popup = mapMarkers.find(m => m.getPopup().getContent().includes(id));
+                if (popup) {
+                    popup.openPopup();
+                    cityMap.setView(popup.getLatLng(), 14);
+                }
+            }
+        }, 500);
+    } else if (type === 'alert') {
+        navigateToPage('command-center');
+        setTimeout(() => {
+            document.getElementById('alerts-feed').scrollIntoView({ behavior: 'smooth' });
+        }, 500);
+    }
+};
