@@ -22,7 +22,7 @@ from pymongo import MongoClient
 
 # ─── DATABASE CONNECTION ─────────────────────────────────────────────
 # Connect to the same MongoDB instance as the ingestion service
-mongo_client = MongoClient("mongodb+srv://aditeshpatro_db_user:admin123@cluster0.gxftxhm.mongodb.net/")
+mongo_client = MongoClient("mongodb+srv://aditeshpatro_db_user:a*****@cluster0.gxftxhm.mongodb.net/")
 db = mongo_client["smart_drain"]
 readings_collection = db["readings"]
 
@@ -897,3 +897,4 @@ async def get_road_health():
 async def get_bridge_health():
     """Get bridge structural health data."""
     return generate_bridge_health()
+
