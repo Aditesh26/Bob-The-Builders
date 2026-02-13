@@ -12,6 +12,7 @@ import os
 import json
 import random
 import math
+import pickle
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
@@ -45,6 +46,33 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 stress_model = None
 stress_dataframe = None
 model_features = ["Rainfall", "Rain_3day", "Rain_7day", "Soil_Moisture", "Runoff", "Drain_Level"]
+MODEL_DIR = os.path.join(BASE_DIR, "models")
+STRESS_MODEL_PATH = os.path.join(MODEL_DIR, "stress_model.pkl")
+STRESS_DATAFRAME_PATH = os.path.join(MODEL_DIR, "stress_dataframe.pkl")
+
+
+def load_stress_model_assets():
+    """Load saved model/data if they exist. Returns True when model is loaded."""
+    global stress_model, stress_dataframe
+
+    if not os.path.exists(STRESS_MODEL_PATH):
+        return False
+
+    try:
+        with open(STRESS_MODEL_PATH, "rb") as model_file:
+            stress_model = pickle.load(model_file)
+
+        if os.path.exists(STRESS_DATAFRAME_PATH):
+            with open(STRESS_DATAFRAME_PATH, "rb") as dataframe_file:
+                stress_dataframe = pickle.load(dataframe_file)
+
+        print("[OK] Loaded saved stress model from disk")
+        return True
+    except Exception as e:
+        print(f"[WARN] Failed to load saved stress model: {e}")
+        stress_model = None
+        stress_dataframe = None
+        return False
 
 def train_stress_model():
     """Train the stress score model from CSV data (runs once at startup)."""
@@ -114,6 +142,12 @@ def train_stress_model():
         stress_model = model
         stress_dataframe = df
 
+        os.makedirs(MODEL_DIR, exist_ok=True)
+        with open(STRESS_MODEL_PATH, "wb") as model_file:
+            pickle.dump(stress_model, model_file)
+        with open(STRESS_DATAFRAME_PATH, "wb") as dataframe_file:
+            pickle.dump(stress_dataframe, dataframe_file)
+
         y_pred = model.predict(X.iloc[split_index:])
         from sklearn.metrics import r2_score
         r2 = r2_score(y.iloc[split_index:], y_pred)
@@ -129,8 +163,9 @@ def train_stress_model():
 
 @app.on_event("startup")
 async def startup_event():
-    """Train ML model on server start."""
-    train_stress_model()
+    """Load saved ML model if available, otherwise train once."""
+    if not load_stress_model_assets():
+        train_stress_model()
 
 
 # ─── MOCK DATA GENERATORS ────────────────────────────────────────────
