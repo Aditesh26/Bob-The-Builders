@@ -23,7 +23,6 @@ const PAGE_TITLES = {
     'analytics': 'Analytics <span>/ System-Wide Trends</span>',
     'roads': 'Roads <span>/ Infrastructure Health</span>',
     'bridges': 'Bridges <span>/ Structural Health</span>',
-    'buildings': 'Buildings <span>/ Safety Monitoring</span>',
     'ai-insights': 'AI Insights <span>/ Intelligence Hub</span>',
     'settings': 'Settings <span>/ System Configuration</span>',
 };
@@ -37,6 +36,8 @@ const api = {
             return await res.json();
         } catch (err) {
             console.error(`Failed to fetch ${endpoint}:`, err);
+            // DEBUG: Alert user on API failure
+            alert(`Failed to fetch ${endpoint}: ${err.message}`);
             return null;
         }
     },
@@ -63,6 +64,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadAllData();
     startAutoRefresh();
 });
+
+// DEBUG: Global error handler to help user report issues
+window.onerror = function (msg, url, line, col, error) {
+    alert(`Error: ${msg}\nLine: ${line}:${col}\n${error}`);
+    return false;
+};
 
 function initLucideIcons() {
     if (window.lucide) {
@@ -268,21 +275,10 @@ function renderModuleCards(stressData, roadData, bridgeData) {
             desc: `${bridgeData?.summary?.total_bridges ?? 0} bridges monitored`,
             badge: `${bridgeData?.summary?.bridges_at_risk ?? 0} at risk`,
         },
-        {
-            id: 'buildings',
-            icon: 'building-2',
-            name: 'Building Safety',
-            score: '--',
-            unit: '',
-            trend: 'stable',
-            color: 'blue',
-            desc: 'Module under development',
-            badge: '🚧 Coming Soon',
-        },
     ];
 
     container.innerHTML = modules.map((mod, i) => `
-        <div class="module-card animate-in ${mod.id === 'buildings' ? 'disabled' : ''}" data-page="${mod.id}" style="animation-delay:${i * 0.08}s">
+        <div class="module-card animate-in" data-page="${mod.id}" style="animation-delay:${i * 0.08}s">
             <div class="module-card-glow ${mod.color}"></div>
             <div class="module-card-header">
                 <div class="module-card-icon ${mod.color}">
@@ -298,7 +294,7 @@ function renderModuleCards(stressData, roadData, bridgeData) {
                 <span class="module-card-desc">${mod.desc}</span>
                 <span class="module-card-trend" style="color:${getTrendColor(mod.trend)}">${getTrendIcon(mod.trend)} ${mod.trend}</span>
             </div>
-            ${mod.id !== 'buildings' ? '<div class="module-card-cta">View Details →</div>' : ''}
+            <div class="module-card-cta">View Details →</div>
         </div>
     `).join('');
 
@@ -679,6 +675,13 @@ async function initAnalyticsCharts() {
         api.getSensorData('water_level'),
         api.getSensorData('soil_moisture'),
     ]);
+
+    // DEBUG: Check if data arrived
+    if (!rainfall && !water && !soil) {
+        alert("Analytics Data Check: All sensor data returned NULL. Please check API connection.");
+    } else {
+        // alert(`Analytics Data: Rain=${!!rainfall}, Water=${!!water}, Soil=${!!soil}`);
+    }
 
     if (rainfall) renderChart('analytics-rainfall-chart', rainfall, 'Rainfall', '#06d6a0', 'rgba(6,214,160,0.1)');
     if (water) renderChart('analytics-water-chart', water, 'Water Level', '#3b82f6', 'rgba(59,130,246,0.1)', 4.2);
