@@ -5,3 +5,4 @@ pandas
 scikit-learn
 numpy
 python-dotenv
+requests

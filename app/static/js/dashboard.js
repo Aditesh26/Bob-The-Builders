@@ -618,7 +618,6 @@ function renderRepairs(recommendations) {
             <div class="repair-issue">${rec.issue}</div>
             <div class="repair-action">💡 ${rec.action}</div>
             <div class="repair-meta">
-                <div class="repair-meta-item">💰 Est. Cost: <span>${rec.estimated_cost}</span></div>
                 <div class="repair-meta-item">⏱️ Failure Window: <span>${rec.failure_window}</span></div>
             </div>
             <div style="margin-top:8px;font-size:0.72rem;color:var(--text-muted)">🎯 Impact: ${rec.impact}</div>
