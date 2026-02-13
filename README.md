@@ -2,7 +2,7 @@
 
 Yantra Central is an AI-powered urban infrastructure health monitoring system designed to provide real-time insights into drainage systems, flood management, road health, and bridge structural integrity.
 
-## 🚀 Features
+## Features
 
 - **Command Center Dashboard**: Centralized view of all infrastructure assets with real-time status and alerts.
 - **Drainage & Flood Monitoring**: 
@@ -19,7 +19,7 @@ Yantra Central is an AI-powered urban infrastructure health monitoring system de
   - Generates predictive alerts for potential failures (e.g., flood risk, blockage detection).
   - Provides actionable repair recommendations with estimated costs and priority.
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 ### Backend
 - **Language**: Python 3.1x
@@ -37,7 +37,7 @@ Yantra Central is an AI-powered urban infrastructure health monitoring system de
 - **Icons**: [Lucide](https://lucide.dev/)
 - **Design**: Modern, dark-mode focused UI with glassmorphism effects.
 
-## 📂 Project Structure
+## Project Structure
 
 ```
 ├── app/
@@ -56,7 +56,7 @@ Yantra Central is an AI-powered urban infrastructure health monitoring system de
 └── README.md                # Project Documentation
 ```
 
-## ⚙️ Setup & Installation
+##  Setup & Installation
 
 ### Prerequisites
 - Python 3.9+
@@ -82,14 +82,14 @@ uvicorn main:app --reload
 Open your web browser and navigate to:
 **http://localhost:8000**
 
-## 🧠 Machine Learning Models
+## Machine Learning Models
 
 The system uses a **Random Forest Regressor** to calculate a "Stress Score" for the drainage network.
 - **Inputs**: Rainfall (3-day total), Soil Moisture, Drain Water Levels.
 - **Training Data**: Historical rainfall data (`e5c275eb-a4f2-4412-9677-73654e8f5f4d.csv`) and soil moisture data (`sm_Tamilnadu_2020.csv`).
 - **Logic**: The model runs on startup (`app/main.py`) to train or load existing `.pkl` assets.
 
-## 📡 API Endpoints
+## API Endpoints
 
 - **GET /**: Serves the main Dashboard.
 - **GET /api/kpis**: System-wide key performance indicators.
@@ -100,4 +100,3 @@ The system uses a **Random Forest Regressor** to calculate a "Stress Score" for 
 - **GET /api/bridge-health**: Mocked data for bridge structural analysis.
 
 ---
-is i
