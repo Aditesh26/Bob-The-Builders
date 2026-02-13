@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yantra Central — Smart City Infrastructure Command Center</title>
+    <meta name="description"
+        content="AI-Powered Urban Infrastructure Health Monitoring Dashboard for Drainage Systems and Flood Management">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+    <!-- App CSS -->
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+
+<body>
+    <div class="app-shell">
+        <!-- ═══ SIDEBAR ═══ -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon">⚡</div>
+                <div class="brand-text">
+                    <span class="brand-name">YANTRA CENTRAL</span>
+                    <span class="brand-sub">Command Center</span>
+                </div>
+            </div>
+            <button class="sidebar-toggle" id="sidebar-toggle" title="Toggle sidebar">
+                <i data-lucide="chevrons-left" style="width:14px;height:14px"></i>
+            </button>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">Overview</div>
+                    <a class="nav-item active" href="#" data-page="command-center">
+                        <i data-lucide="layout-dashboard" class="nav-icon"></i>
+                        <span class="nav-label">Command Center</span>
+                    </a>
+                    <a class="nav-item" href="#" data-page="analytics">
+                        <i data-lucide="bar-chart-3" class="nav-icon"></i>
+                        <span class="nav-label">Analytics</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Infrastructure</div>
+                    <a class="nav-item" href="#" data-page="drainage">
+                        <i data-lucide="waves" class="nav-icon"></i>
+                        <span class="nav-label">Drainage</span>
+                        <span class="nav-badge" id="drainage-badge">3</span>
+                    </a>
+                    <a class="nav-item" href="#" data-page="stress-score">
+                        <i data-lucide="activity" class="nav-icon"></i>
+                        <span class="nav-label">Drainage Stress</span>
+                    </a>
+                    <a class="nav-item" href="#" data-page="roads">
+                        <i data-lucide="road" class="nav-icon"></i>
+                        <span class="nav-label">Roads</span>
+                    </a>
+                    <a class="nav-item" href="#" data-page="bridges">
+                        <i data-lucide="bridge" class="nav-icon"></i>
+                        <span class="nav-label">Bridges</span>
+                    </a>
+                    <a class="nav-item" href="#" data-page="buildings">
+                        <i data-lucide="building-2" class="nav-icon"></i>
+                        <span class="nav-label">Buildings</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">System</div>
+                    <a class="nav-item" href="#" data-page="ai-insights">
+                        <i data-lucide="brain" class="nav-icon"></i>
+                        <span class="nav-label">AI Insights</span>
+                    </a>
+                    <a class="nav-item" href="#" data-page="settings">
+                        <i data-lucide="settings" class="nav-icon"></i>
+                        <span class="nav-label">Settings</span>
+                    </a>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- ═══ MAIN ═══ -->
+        <div class="main-wrapper">
+            <!-- HEADER -->
+            <header class="header">
+                <div class="header-left">
+                    <h1 class="header-title">Command Center <span>/ Infrastructure Overview</span></h1>
+                    <div class="header-search">
+                        <i data-lucide="search" style="width:16px;height:16px"></i>
+                        <input type="text" placeholder="Search nodes, zones, alerts..." id="global-search">
+                    </div>
+                </div>
+                <div class="header-right">
+                    <div class="system-status" id="system-status">
+                        <div class="status-dot green" id="status-dot"></div>
+                        <span id="status-text">All Systems Operational</span>
+                    </div>
+                    <div class="header-datetime">
+                        <span id="live-clock"></span>
+                    </div>
+                    <button class="notification-btn" id="notification-btn" title="Notifications">
+                        <i data-lucide="bell" style="width:18px;height:18px"></i>
+                        <span class="badge" id="notif-badge">5</span>
+                    </button>
+                    <div class="user-avatar" title="Admin User">NP</div>
+                </div>
+            </header>
+
+            <!-- DASHBOARD CONTENT -->
+            <main class="main-content" id="main-content">
+
+                <!-- ════════════ PAGE: COMMAND CENTER ════════════ -->
+                <div class="page-section active" id="page-command-center">
+                    <div class="dashboard-grid">
+
+                        <!-- MODULE CARDS - Clickable mini dashboards -->
+                        <div class="section-title">Infrastructure Modules</div>
+                        <div class="module-cards-grid" id="module-cards-grid">
+                            <!-- Populated by JS -->
+                        </div>
+
+                        <div class="kpi-row" id="kpi-row"></div>
+
+                        <div class="charts-row">
+                            <div class="card animate-in">
+                                <div class="card-header">
+                                    <div class="card-title"><i data-lucide="map-pin"></i> Live Infrastructure Map</div>
+                                    <div style="display:flex;gap:6px;">
+                                        <button class="map-layer-btn active" data-layer="all"
+                                            style="font-size:0.7rem;padding:4px 10px;background:var(--cyan-dim);color:var(--cyan);border:1px solid var(--cyan);border-radius:4px;cursor:pointer;font-family:var(--font-mono)">All</button>
+                                        <button class="map-layer-btn" data-layer="critical"
+                                            style="font-size:0.7rem;padding:4px 10px;background:var(--bg-secondary);color:var(--text-muted);border:1px solid var(--border);border-radius:4px;cursor:pointer;font-family:var(--font-mono)">Critical</button>
+                                    </div>
+                                </div>
+                                <div class="map-container">
+                                    <div id="city-map"></div>
+                                    <div class="map-legend">
+                                        <div class="legend-title">Risk Level</div>
+                                        <div class="legend-item">
+                                            <div class="legend-dot" style="background:#ef4444"></div> Critical
+                                        </div>
+                                        <div class="legend-item">
+                                            <div class="legend-dot" style="background:#f59e0b"></div> Warning
+                                        </div>
+                                        <div class="legend-item">
+                                            <div class="legend-dot" style="background:#10b981"></div> Online
+                                        </div>
+                                        <div class="legend-item">
+                                            <div class="legend-dot" style="background:#5a6478"></div> Offline
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section-title">Real-Time Sensor Analytics</div>
+                        <div class="charts-row">
+                            <div class="card animate-in">
+                                <div class="card-header">
+                                    <div class="card-title"><i data-lucide="cloud-rain"></i> Rainfall Intensity</div>
+                                    <span
+                                        style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text-muted)">mm/hr</span>
+                                </div>
+                                <div class="chart-container"><canvas id="rainfall-chart"></canvas></div>
+                            </div>
+                            <div class="card animate-in">
+                                <div class="card-header">
+                                    <div class="card-title"><i data-lucide="gauge"></i> Water Level</div>
+                                    <span
+                                        style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text-muted)">meters</span>
+                                </div>
+                                <div class="chart-container"><canvas id="water-chart"></canvas></div>
+                            </div>
+                        </div>
+
+                        <div class="charts-row">
+                            <div class="card animate-in">
+                                <div class="card-header">
+                                    <div class="card-title"><i data-lucide="sprout"></i> Soil Moisture</div>
+                                    <span
+                                        style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text-muted)">%</span>
+                                </div>
+                                <div class="chart-container"><canvas id="soil-chart"></canvas></div>
+                            </div>
+                            <div class="card animate-in">
+                                <div class="card-header">
+                                    <div class="card-title"><i data-lucide="shield-alert"></i> Predictive Alerts</div>
+                                    <span style="font-family:var(--font-mono);font-size:0.75rem;color:var(--red)"
+                                        id="critical-count">0 Critical</span>
+                                </div>
+                                <div class="alerts-feed" id="alerts-feed"></div>
+                            </div>
+                        </div>
+
+                        <div class="section-title">AI-Powered Decision Support</div>
+                        <div class="bottom-row">
+                            <div class="card animate-in">
+                                <div class="card-header">
+                                    <div class="card-title"><i data-lucide="wrench"></i> Priority Repair Recommendations
+                                    </div>
+                                </div>
+                                <div class="repair-list" id="repair-list"></div>
+                            </div>
+                            <div class="card animate-in">
+                                <div class="card-header">
+                                    <div class="card-title"><i data-lucide="brain"></i> AI Insights & Predictions</div>
+                                </div>
+                                <div class="insights-list" id="insights-list"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ════════════ PAGE: DRAINAGE ════════════ -->
+                <div class="page-section" id="page-drainage">
+                    <div class="dashboard-grid">
+                        <div class="section-title">Drainage Network Monitoring</div>
+                        <div class="card animate-in full-width">
+                            <div class="card-header">
+                                <div class="card-title"><i data-lucide="database"></i> Active Drainage Nodes</div>
+                                <span style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text-muted)"
+                                    id="node-count">12 Nodes</span>
+                            </div>
+                            <div class="data-table-wrapper">
+                                <table class="data-table" id="drainage-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Node ID</th>
+                                            <th>Location</th>
+                                            <th>Zone</th>
+                                            <th>Status</th>
+                                            <th>Water Level (m)</th>
+                                            <th>Flow Rate (m³/s)</th>
+                                            <th>Risk Score</th>
+                                            <th>Urgency</th>
+                                            <th>Last Update</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="drainage-tbody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="charts-row">
+                            <div class="card animate-in">
+                                <div class="card-header">
+                                    <div class="card-title"><i data-lucide="shield-alert"></i> Drainage Alerts</div>
+                                </div>
+                                <div class="alerts-feed" id="drainage-alerts-feed"></div>
+                            </div>
+                            <div class="card animate-in">
+                                <div class="card-header">
+                                    <div class="card-title"><i data-lucide="wrench"></i> Repair Recommendations</div>
+                                </div>
+                                <div class="repair-list" id="drainage-repair-list"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ════════════ PAGE: STRESS SCORE ════════════ -->
+                <div class="page-section" id="page-stress-score">
+                    <div class="dashboard-grid">
+                        <div class="section-title">Drainage Stress Analysis — ML-Powered</div>
+
+                        <!-- Model info banner -->
+                        <div class="model-info-banner" id="stress-model-banner">
+                            <div class="model-info-left">
+                                <i data-lucide="brain" style="width:20px;height:20px;color:var(--cyan)"></i>
+                                <div>
+                                    <div class="model-name" id="stress-model-name">RandomForest Stress Model v1.0</div>
+                                    <div class="model-desc">Predicts stress score from rainfall, soil moisture & drain
+                                        water level</div>
+                                </div>
+                            </div>
+                            <div class="model-r2" id="stress-model-r2">
+                                <span class="r2-label">Model R²</span>
+                                <span class="r2-value">0.95</span>
+                            </div>
+                        </div>
+
+                        <!-- Score comparison cards -->
+                        <div class="stress-comparison-row" id="stress-comparison-row">
+                            <!-- Populated by JS -->
+                        </div>
+
+                        <!-- Stress score trend chart -->
+                        <div class="card animate-in full-width">
+                            <div class="card-header">
+                                <div class="card-title"><i data-lucide="trending-up"></i> Stress Score Trend</div>
+                                <span
+                                    style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text-muted)">Historical
+                                    data from ML model</span>
+                            </div>
+                            <div class="chart-container chart-container-lg"><canvas id="stress-history-chart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Sensor readings breakdown -->
+                        <div class="charts-row">
+                            <div class="card animate-in">
+                                <div class="card-header">
+                                    <div class="card-title"><i data-lucide="cloud-rain"></i> Rainfall Data</div>
+                                </div>
+                                <div class="chart-container"><canvas id="stress-rainfall-chart"></canvas></div>
+                            </div>
+                            <div class="card animate-in">
+                                <div class="card-header">
+                                    <div class="card-title"><i data-lucide="sprout"></i> Soil Moisture Data</div>
+                                </div>
+                                <div class="chart-container"><canvas id="stress-soil-chart"></canvas></div>
+                            </div>
+                        </div>
+
+                        <!-- Feature importance info -->
+                        <div class="card animate-in full-width">
+                            <div class="card-header">
+                                <div class="card-title"><i data-lucide="bar-chart-3"></i> Model Features & Weights</div>
+                            </div>
+                            <div class="feature-grid">
+                                <div class="feature-item">
+                                    <div class="feature-name">3-Day Rainfall</div>
+                                    <div class="feature-bar">
+                                        <div class="feature-bar-fill" style="width:50%;background:var(--cyan)"></div>
+                                    </div>
+                                    <div class="feature-weight">50%</div>
+                                </div>
+                                <div class="feature-item">
+                                    <div class="feature-name">Soil Saturation</div>
+                                    <div class="feature-bar">
+                                        <div class="feature-bar-fill" style="width:30%;background:var(--amber)"></div>
+                                    </div>
+                                    <div class="feature-weight">30%</div>
+                                </div>
+                                <div class="feature-item">
+                                    <div class="feature-name">Drain Level</div>
+                                    <div class="feature-bar">
+                                        <div class="feature-bar-fill" style="width:20%;background:var(--purple)"></div>
+                                    </div>
+                                    <div class="feature-weight">20%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ════════════ PAGE: ROADS ════════════ -->
+                <div class="page-section" id="page-roads">
+                    <div class="dashboard-grid">
+                        <div class="section-title">Road Infrastructure Health</div>
+
+                        <!-- Road KPIs -->
+                        <div class="kpi-row kpi-row-4" id="road-kpi-row">
+                            <!-- Populated by JS -->
+                        </div>
+
+                        <!-- Road health trend chart -->
+                        <div class="card animate-in full-width">
+                            <div class="card-header">
+                                <div class="card-title"><i data-lucide="trending-up"></i> Road Health Index — 30 Day
+                                    Trend</div>
+                            </div>
+                            <div class="chart-container"><canvas id="road-health-chart"></canvas></div>
+                        </div>
+
+                        <!-- Road segments table -->
+                        <div class="card animate-in full-width">
+                            <div class="card-header">
+                                <div class="card-title"><i data-lucide="map"></i> Road Segments</div>
+                                <span style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text-muted)"
+                                    id="road-segment-count">10 Segments</span>
+                            </div>
+                            <div class="data-table-wrapper">
+                                <table class="data-table" id="road-table">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Road Name</th>
+                                            <th>Zone</th>
+                                            <th>Length (km)</th>
+                                            <th>Health Score</th>
+                                            <th>Condition</th>
+                                            <th>Potholes</th>
+                                            <th>Surface Index</th>
+                                            <th>Traffic</th>
+                                            <th>Last Inspection</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="road-tbody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ════════════ PAGE: BRIDGES ════════════ -->
+                <div class="page-section" id="page-bridges">
+                    <div class="dashboard-grid">
+                        <div class="section-title">Bridge Structural Health Monitoring</div>
+
+                        <!-- Bridge KPIs -->
+                        <div class="kpi-row kpi-row-4" id="bridge-kpi-row">
+                            <!-- Populated by JS -->
+                        </div>
+
+                        <!-- Bridge health trend chart -->
+                        <div class="card animate-in full-width">
+                            <div class="card-header">
+                                <div class="card-title"><i data-lucide="trending-up"></i> Structural Health Index — 30
+                                    Day Trend</div>
+                            </div>
+                            <div class="chart-container"><canvas id="bridge-health-chart"></canvas></div>
+                        </div>
+
+                        <!-- Bridge list table -->
+                        <div class="card animate-in full-width">
+                            <div class="card-header">
+                                <div class="card-title"><i data-lucide="bridge"></i> Monitored Bridges</div>
+                                <span style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text-muted)"
+                                    id="bridge-count">8 Bridges</span>
+                            </div>
+                            <div class="data-table-wrapper">
+                                <table class="data-table" id="bridge-table">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Bridge Name</th>
+                                            <th>Type</th>
+                                            <th>Zone</th>
+                                            <th>Health</th>
+                                            <th>Status</th>
+                                            <th>Vibration</th>
+                                            <th>Load Factor</th>
+                                            <th>Crack Index</th>
+                                            <th>Next Maintenance</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="bridge-tbody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ════════════ PAGE: ANALYTICS ════════════ -->
+                <div class="page-section" id="page-analytics">
+                    <div class="dashboard-grid">
+                        <div class="section-title">System-Wide Analytics</div>
+                        <div class="charts-row">
+                            <div class="card animate-in">
+                                <div class="card-header">
+                                    <div class="card-title"><i data-lucide="cloud-rain"></i> Rainfall — 24hr Trend</div>
+                                </div>
+                                <div class="chart-container"><canvas id="analytics-rainfall-chart"></canvas></div>
+                            </div>
+                            <div class="card animate-in">
+                                <div class="card-header">
+                                    <div class="card-title"><i data-lucide="gauge"></i> Water Level — 24hr Trend</div>
+                                </div>
+                                <div class="chart-container"><canvas id="analytics-water-chart"></canvas></div>
+                            </div>
+                        </div>
+                        <div class="charts-row">
+                            <div class="card animate-in">
+                                <div class="card-header">
+                                    <div class="card-title"><i data-lucide="sprout"></i> Soil Moisture — 24hr Trend
+                                    </div>
+                                </div>
+                                <div class="chart-container"><canvas id="analytics-soil-chart"></canvas></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ════════════ PAGE: AI INSIGHTS ════════════ -->
+                <div class="page-section" id="page-ai-insights">
+                    <div class="dashboard-grid">
+                        <div class="section-title">AI-Powered Intelligence Hub</div>
+                        <div class="bottom-row">
+                            <div class="card animate-in">
+                                <div class="card-header">
+                                    <div class="card-title"><i data-lucide="brain"></i> AI Insights & Predictions</div>
+                                </div>
+                                <div class="insights-list" id="ai-page-insights"></div>
+                            </div>
+                            <div class="card animate-in">
+                                <div class="card-header">
+                                    <div class="card-title"><i data-lucide="shield-alert"></i> Predictive Alerts</div>
+                                </div>
+                                <div class="alerts-feed" id="ai-page-alerts"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ════════════ PAGE: BUILDINGS ════════════ -->
+                <div class="page-section" id="page-buildings">
+                    <div class="coming-soon-page">
+                        <div class="coming-soon-icon"><i data-lucide="building-2"
+                                style="width:64px;height:64px;color:var(--purple)"></i></div>
+                        <h2 class="coming-soon-title">Building Safety Monitoring</h2>
+                        <p class="coming-soon-desc">Structural tilt monitoring, foundation settlement tracking, seismic
+                            vulnerability assessment, and occupancy safety analytics.</p>
+                        <div class="coming-soon-badge">🚧 Module Under Development</div>
+                        <div class="coming-soon-features">
+                            <div class="cs-feature"><i data-lucide="move"
+                                    style="width:18px;height:18px;color:var(--purple)"></i><span>Structural Tilt
+                                    Monitoring</span></div>
+                            <div class="cs-feature"><i data-lucide="layers"
+                                    style="width:18px;height:18px;color:var(--amber)"></i><span>Foundation Settlement
+                                    Tracking</span></div>
+                            <div class="cs-feature"><i data-lucide="shield-check"
+                                    style="width:18px;height:18px;color:var(--emerald)"></i><span>Seismic Vulnerability
+                                    Score</span></div>
+                            <div class="cs-feature"><i data-lucide="users"
+                                    style="width:18px;height:18px;color:var(--cyan)"></i><span>Occupancy Safety
+                                    Analytics</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ════════════ PAGE: SETTINGS ════════════ -->
+                <div class="page-section" id="page-settings">
+                    <div class="dashboard-grid">
+                        <div class="section-title">System Settings</div>
+                        <div class="card animate-in" style="max-width:680px">
+                            <div class="card-header">
+                                <div class="card-title"><i data-lucide="settings"></i> Configuration</div>
+                            </div>
+                            <div style="display:flex;flex-direction:column;gap:16px;padding:8px 0">
+                                <div
+                                    style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--bg-secondary);border-radius:var(--radius-sm)">
+                                    <div>
+                                        <div style="font-weight:600;margin-bottom:2px">API Endpoint</div>
+                                        <div style="font-size:0.78rem;color:var(--text-muted)">Backend server URL for
+                                            data</div>
+                                    </div>
+                                    <span
+                                        style="font-family:var(--font-mono);color:var(--cyan);font-size:0.82rem;background:var(--cyan-dim);padding:4px 12px;border-radius:6px">localhost:8000</span>
+                                </div>
+                                <div
+                                    style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--bg-secondary);border-radius:var(--radius-sm)">
+                                    <div>
+                                        <div style="font-weight:600;margin-bottom:2px">Data Refresh Interval</div>
+                                        <div style="font-size:0.78rem;color:var(--text-muted)">Auto-refresh rate for
+                                            live data</div>
+                                    </div>
+                                    <span
+                                        style="font-family:var(--font-mono);color:var(--amber);font-size:0.82rem;background:var(--amber-dim);padding:4px 12px;border-radius:6px">8
+                                        seconds</span>
+                                </div>
+                                <div
+                                    style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--bg-secondary);border-radius:var(--radius-sm)">
+                                    <div>
+                                        <div style="font-weight:600;margin-bottom:2px">ML Models Active</div>
+                                        <div style="font-size:0.78rem;color:var(--text-muted)">Number of models
+                                            currently running</div>
+                                    </div>
+                                    <span
+                                        style="font-family:var(--font-mono);color:var(--emerald);font-size:0.82rem;background:rgba(16,185,129,0.15);padding:4px 12px;border-radius:6px">5
+                                        Models</span>
+                                </div>
+                                <div
+                                    style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--bg-secondary);border-radius:var(--radius-sm)">
+                                    <div>
+                                        <div style="font-weight:600;margin-bottom:2px">Data Source Mode</div>
+                                        <div style="font-size:0.78rem;color:var(--text-muted)">ML model trained on real
+                                            CSV data + mock data</div>
+                                    </div>
+                                    <span
+                                        style="font-family:var(--font-mono);color:var(--purple);font-size:0.82rem;background:rgba(168,85,247,0.15);padding:4px 12px;border-radius:6px">Hybrid
+                                        Mode</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- App JavaScript -->
+    <script src="/static/js/dashboard.js"></script>
+</body>
+
+</html>
