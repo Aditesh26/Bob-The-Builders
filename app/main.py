@@ -779,6 +779,26 @@ def generate_bridge_health():
 
 # ─── API ROUTES ──────────────────────────────────────────────────────
 
+@app.post("/reading")
+def add_reading(rainfall: float, water_level: float, soil_moisture: float):
+    """Receive and store a new sensor reading from IoT devices."""
+    data = {
+        "rainfall": rainfall,
+        "water_level": water_level,
+        "soil_moisture": soil_moisture,
+        "timestamp": datetime.utcnow()
+    }
+
+    try:
+        result = readings_collection.insert_one(data)
+        return {
+            "message": "Reading stored",
+            "id": str(result.inserted_id)
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
 @app.get("/", response_class=HTMLResponse)
 async def serve_dashboard():
     """Serve the main dashboard HTML."""
