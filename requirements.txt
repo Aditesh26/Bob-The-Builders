@@ -5,4 +5,8 @@ pandas
 scikit-learn
 numpy
 python-dotenv
+requests
 pyserial
+passlib
+python-jose[cryptography]
+python-multipart

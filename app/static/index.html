@@ -78,10 +78,6 @@
                         <i data-lucide="bridge" class="nav-icon"></i>
                         <span class="nav-label">Bridges</span>
                     </a>
-                    <a class="nav-item" href="#" data-page="buildings">
-                        <i data-lucide="building-2" class="nav-icon"></i>
-                        <span class="nav-label">Buildings</span>
-                    </a>
                 </div>
 
                 <div class="nav-section">
@@ -90,12 +86,23 @@
                         <i data-lucide="brain" class="nav-icon"></i>
                         <span class="nav-label">AI Insights</span>
                     </a>
+                    <a class="nav-item" href="#" data-page="complaints">
+                        <i data-lucide="message-square-warning" class="nav-icon"></i>
+                        <span class="nav-label">Complaints</span>
+                    </a>
                     <a class="nav-item" href="#" data-page="settings">
                         <i data-lucide="settings" class="nav-icon"></i>
                         <span class="nav-label">Settings</span>
                     </a>
                 </div>
             </nav>
+
+            <div style="padding: 12px; margin-top: auto; border-top: 1px solid var(--border);">
+                <a class="nav-item" href="#" id="logout-btn">
+                    <i data-lucide="log-out" class="nav-icon" style="color: var(--red);"></i>
+                    <span class="nav-label" style="color: var(--red);">Logout</span>
+                </a>
+            </div>
         </aside>
 
         <!-- ═══ MAIN ═══ -->
@@ -512,28 +519,77 @@
                     </div>
                 </div>
 
-                <!-- ════════════ PAGE: BUILDINGS ════════════ -->
-                <div class="page-section" id="page-buildings">
-                    <div class="coming-soon-page">
-                        <div class="coming-soon-icon"><i data-lucide="building-2"
-                                style="width:64px;height:64px;color:var(--purple)"></i></div>
-                        <h2 class="coming-soon-title">Building Safety Monitoring</h2>
-                        <p class="coming-soon-desc">Structural tilt monitoring, foundation settlement tracking, seismic
-                            vulnerability assessment, and occupancy safety analytics.</p>
-                        <div class="coming-soon-badge">🚧 Module Under Development</div>
-                        <div class="coming-soon-features">
-                            <div class="cs-feature"><i data-lucide="move"
-                                    style="width:18px;height:18px;color:var(--purple)"></i><span>Structural Tilt
-                                    Monitoring</span></div>
-                            <div class="cs-feature"><i data-lucide="layers"
-                                    style="width:18px;height:18px;color:var(--amber)"></i><span>Foundation Settlement
-                                    Tracking</span></div>
-                            <div class="cs-feature"><i data-lucide="shield-check"
-                                    style="width:18px;height:18px;color:var(--emerald)"></i><span>Seismic Vulnerability
-                                    Score</span></div>
-                            <div class="cs-feature"><i data-lucide="users"
-                                    style="width:18px;height:18px;color:var(--cyan)"></i><span>Occupancy Safety
-                                    Analytics</span></div>
+
+                <!-- ════════════ PAGE: COMPLAINTS ════════════ -->
+                <div class="page-section" id="page-complaints">
+                    <div class="dashboard-grid">
+                        <div class="section-title">Infrastructure Complaints</div>
+
+                        <!-- Public View: Submission Form -->
+                        <div id="complaint-form-container" class="card animate-in"
+                            style="max-width: 600px; display: none;">
+                            <div class="card-header">
+                                <div class="card-title"><i data-lucide="file-plus"></i> Submit New Complaint</div>
+                            </div>
+                            <form id="complaint-form">
+                                <div style="margin-bottom: 16px;">
+                                    <label
+                                        style="display:block; margin-bottom: 8px; font-size: 0.85rem; color: var(--text-secondary);">Infrastructure
+                                        Type</label>
+                                    <select id="complaint-type" class="form-select"
+                                        style="width:100%; padding: 10px; background: var(--bg-input); border: 1px solid var(--border); color: var(--text-primary); border-radius: var(--radius-sm); outline:none;">
+                                        <option value="drainage">Drainage System</option>
+                                        <option value="road">Road Network</option>
+                                        <option value="bridge">Bridge Infrastructure</option>
+                                    </select>
+                                </div>
+                                <!-- Area/Sensor Dropdown (Visible only for Drainage) -->
+                                <div id="area-group" style="margin-bottom: 16px;">
+                                    <label
+                                        style="display:block; margin-bottom: 8px; font-size: 0.85rem; color: var(--text-secondary);">Select
+                                        Area / Sensor</label>
+                                    <select id="complaint-area" class="form-select"
+                                        style="width:100%; padding: 10px; background: var(--bg-input); border: 1px solid var(--border); color: var(--text-primary); border-radius: var(--radius-sm); outline:none;">
+                                        <option value="">Select Sensor...</option>
+                                        <!-- Populated by JS -->
+                                    </select>
+                                </div>
+                                <div style="margin-bottom: 16px;">
+                                    <label
+                                        style="display:block; margin-bottom: 8px; font-size: 0.85rem; color: var(--text-secondary);">Description
+                                        of Issue</label>
+                                    <textarea id="complaint-desc" rows="4"
+                                        style="width:100%; padding: 10px; background: var(--bg-input); border: 1px solid var(--border); color: var(--text-primary); border-radius: var(--radius-sm); outline:none; font-family:var(--font-sans);"
+                                        placeholder="Describe the problem..."></textarea>
+                                </div>
+                                <button type="submit"
+                                    style="padding: 10px 20px; background: var(--cyan); color: var(--bg-primary); border: none; border-radius: var(--radius-sm); font-weight: 600; cursor: pointer;">Submit
+                                    Complaint</button>
+                            </form>
+                        </div>
+
+                        <!-- Authority View: Complaints List -->
+                        <div id="complaint-list-container" class="card animate-in full-width" style="display: none;">
+                            <div class="card-header">
+                                <div class="card-title"><i data-lucide="list"></i> Citizen Complaints</div>
+                            </div>
+                            <div class="data-table-wrapper">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Type</th>
+                                            <th>Area / Sensor</th>
+                                            <th>Description</th>
+                                            <th>Reported By</th>
+                                            <th>Time</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="complaints-tbody">
+                                        <!-- Populated by JS -->
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>

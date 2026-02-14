@@ -15,6 +15,7 @@ let cityMap = null;
 let mapMarkers = [];
 let sidebarCollapsed = false;
 let currentPage = 'command-center';
+let searchableItems = []; // Global search index
 
 const PAGE_TITLES = {
     'command-center': 'Command Center <span>/ Infrastructure Overview</span>',
@@ -23,20 +24,40 @@ const PAGE_TITLES = {
     'analytics': 'Analytics <span>/ System-Wide Trends</span>',
     'roads': 'Roads <span>/ Infrastructure Health</span>',
     'bridges': 'Bridges <span>/ Structural Health</span>',
-    'buildings': 'Buildings <span>/ Safety Monitoring</span>',
     'ai-insights': 'AI Insights <span>/ Intelligence Hub</span>',
     'settings': 'Settings <span>/ System Configuration</span>',
 };
 
 // ─── API SERVICE LAYER ──────────────────────────────────────────────
+// ─── API SERVICE LAYER ──────────────────────────────────────────────
 const api = {
+    getHeaders() {
+        const token = localStorage.getItem('token');
+        return token ? { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
+    },
     async get(endpoint) {
         try {
-            const res = await fetch(`${API_BASE}${endpoint}`);
+            const res = await fetch(`${API_BASE}${endpoint}`, { headers: this.getHeaders() });
+            if (res.status === 401) { window.location.href = '/static/login.html'; return null; }
             if (!res.ok) throw new Error(`API error: ${res.status}`);
             return await res.json();
         } catch (err) {
             console.error(`Failed to fetch ${endpoint}:`, err);
+            return null;
+        }
+    },
+    async post(endpoint, body) {
+        try {
+            const res = await fetch(`${API_BASE}${endpoint}`, {
+                method: 'POST',
+                headers: this.getHeaders(),
+                body: JSON.stringify(body)
+            });
+            if (res.status === 401) { window.location.href = '/static/login.html'; return null; }
+            if (!res.ok) throw new Error(`API error: ${res.status}`);
+            return await res.json();
+        } catch (err) {
+            console.error(`Failed to post ${endpoint}:`, err);
             return null;
         }
     },
@@ -52,17 +73,28 @@ const api = {
     getStressHistory: () => api.get('/api/stress-score/history'),
     getRoadHealth: () => api.get('/api/road-health'),
     getBridgeHealth: () => api.get('/api/bridge-health'),
+    getMe: () => api.get('/api/users/me'),
+    postComplaint: (data) => api.post('/api/complaints', data),
+    getComplaints: () => api.get('/api/complaints'),
 };
 
 // ─── INITIALIZATION ─────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
+    await checkAuth(); // Auth Check First
     initLucideIcons();
     initSidebar();
     initClock();
     initMap();
+    initSearch(); // Initialize search listener
     await loadAllData();
     startAutoRefresh();
 });
+
+// DEBUG: Global error handler to help user report issues
+window.onerror = function (msg, url, line, col, error) {
+    alert(`Error: ${msg}\nLine: ${line}:${col}\n${error}`);
+    return false;
+};
 
 function initLucideIcons() {
     if (window.lucide) {
@@ -160,6 +192,18 @@ async function loadAllData() {
         api.getRoadHealth(),
         api.getBridgeHealth(),
     ]);
+
+    // Populate search index
+    searchableItems = [];
+    if (nodes) nodes.forEach(n => searchableItems.push({ ...n, type: 'node', label: n.name, sub: n.id }));
+    if (alerts) alerts.forEach(a => searchableItems.push({ ...a, type: 'alert', label: a.title, sub: a.message }));
+    // We can also add zones if we had the raw list here, but 'nodes' covers most locations
+    // Add navigation pages to search
+    Object.entries(PAGE_TITLES).forEach(([key, val]) => {
+        // Strip HTML span
+        const cleanTitle = val.replace(/<[^>]*>/g, ' ').replace('  ', ' - ');
+        searchableItems.push({ type: 'page', id: key, label: cleanTitle, sub: 'Navigation' });
+    });
 
     if (kpis) renderKPIs(kpis);
     if (rainfall) renderChart('rainfall-chart', rainfall, 'Rainfall', '#06d6a0', 'rgba(6,214,160,0.1)');
@@ -268,21 +312,10 @@ function renderModuleCards(stressData, roadData, bridgeData) {
             desc: `${bridgeData?.summary?.total_bridges ?? 0} bridges monitored`,
             badge: `${bridgeData?.summary?.bridges_at_risk ?? 0} at risk`,
         },
-        {
-            id: 'buildings',
-            icon: 'building-2',
-            name: 'Building Safety',
-            score: '--',
-            unit: '',
-            trend: 'stable',
-            color: 'blue',
-            desc: 'Module under development',
-            badge: '🚧 Coming Soon',
-        },
     ];
 
     container.innerHTML = modules.map((mod, i) => `
-        <div class="module-card animate-in ${mod.id === 'buildings' ? 'disabled' : ''}" data-page="${mod.id}" style="animation-delay:${i * 0.08}s">
+        <div class="module-card animate-in" data-page="${mod.id}" style="animation-delay:${i * 0.08}s">
             <div class="module-card-glow ${mod.color}"></div>
             <div class="module-card-header">
                 <div class="module-card-icon ${mod.color}">
@@ -298,7 +331,7 @@ function renderModuleCards(stressData, roadData, bridgeData) {
                 <span class="module-card-desc">${mod.desc}</span>
                 <span class="module-card-trend" style="color:${getTrendColor(mod.trend)}">${getTrendIcon(mod.trend)} ${mod.trend}</span>
             </div>
-            ${mod.id !== 'buildings' ? '<div class="module-card-cta">View Details →</div>' : ''}
+            <div class="module-card-cta">View Details →</div>
         </div>
     `).join('');
 
@@ -618,7 +651,6 @@ function renderRepairs(recommendations) {
             <div class="repair-issue">${rec.issue}</div>
             <div class="repair-action">💡 ${rec.action}</div>
             <div class="repair-meta">
-                <div class="repair-meta-item">💰 Est. Cost: <span>${rec.estimated_cost}</span></div>
                 <div class="repair-meta-item">⏱️ Failure Window: <span>${rec.failure_window}</span></div>
             </div>
             <div style="margin-top:8px;font-size:0.72rem;color:var(--text-muted)">🎯 Impact: ${rec.impact}</div>
@@ -680,6 +712,13 @@ async function initAnalyticsCharts() {
         api.getSensorData('water_level'),
         api.getSensorData('soil_moisture'),
     ]);
+
+    // DEBUG: Check if data arrived
+    if (!rainfall && !water && !soil) {
+        alert("Analytics Data Check: All sensor data returned NULL. Please check API connection.");
+    } else {
+        // alert(`Analytics Data: Rain=${!!rainfall}, Water=${!!water}, Soil=${!!soil}`);
+    }
 
     if (rainfall) renderChart('analytics-rainfall-chart', rainfall, 'Rainfall', '#06d6a0', 'rgba(6,214,160,0.1)');
     if (water) renderChart('analytics-water-chart', water, 'Water Level', '#3b82f6', 'rgba(59,130,246,0.1)', 4.2);
@@ -782,92 +821,136 @@ function renderStressHistoryChart(data) {
     const scores = data.map(d => d.score);
 
     // Color segments based on score level
-    const pointColors = scores.map(s => s > 70 ? '#ef4444' : s > 45 ? '#f59e0b' : '#10b981');
+    // (Simpler implementation for now: single color)
+    renderChart('stress-history-chart',
+        data,
+        'Stress Score',
+        '#06d6a0',
+        'rgba(6,214,160,0.1)'
+    );
+}
 
-    charts['stress-history-chart'] = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels,
-            datasets: [
-                {
-                    label: 'Stress Score',
-                    data: scores,
-                    borderColor: '#06d6a0',
-                    backgroundColor: 'rgba(6,214,160,0.08)',
-                    fill: true,
-                    tension: 0.4,
-                    borderWidth: 2.5,
-                    pointRadius: 4,
-                    pointBackgroundColor: pointColors,
-                    pointBorderColor: pointColors,
-                    pointHoverRadius: 7,
-                    pointHoverBorderColor: '#fff',
-                    pointHoverBorderWidth: 2,
-                },
-                {
-                    label: 'High Risk Threshold',
-                    data: Array(scores.length).fill(70),
-                    borderColor: '#ef444480',
-                    borderWidth: 1.5,
-                    borderDash: [6, 4],
-                    fill: false,
-                    pointRadius: 0,
-                },
-                {
-                    label: 'Moderate Threshold',
-                    data: Array(scores.length).fill(45),
-                    borderColor: '#f59e0b80',
-                    borderWidth: 1.5,
-                    borderDash: [6, 4],
-                    fill: false,
-                    pointRadius: 0,
-                },
-            ],
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { intersect: false, mode: 'index' },
-            plugins: {
-                legend: {
-                    display: true,
-                    position: 'top',
-                    labels: {
-                        color: '#8892a8',
-                        font: { family: 'Inter', size: 11 },
-                        usePointStyle: true,
-                        padding: 20,
-                    }
-                },
-                tooltip: {
-                    backgroundColor: '#111a2e',
-                    borderColor: '#1e2a42',
-                    borderWidth: 1,
-                    titleColor: '#e8ecf4',
-                    bodyColor: '#8892a8',
-                    titleFont: { family: 'Inter', weight: '600' },
-                    bodyFont: { family: 'JetBrains Mono', size: 12 },
-                    padding: 12,
-                    cornerRadius: 8,
-                },
-            },
-            scales: {
-                x: {
-                    grid: { color: '#1e2a4230', drawBorder: false },
-                    ticks: { color: '#5a6478', font: { family: 'JetBrains Mono', size: 10 }, maxTicksLimit: 15, maxRotation: 45 },
-                    border: { display: false },
-                },
-                y: {
-                    min: 0,
-                    max: 100,
-                    grid: { color: '#1e2a4230', drawBorder: false },
-                    ticks: { color: '#5a6478', font: { family: 'JetBrains Mono', size: 10 } },
-                    border: { display: false },
-                },
-            },
-            animation: { duration: 1000, easing: 'easeOutQuart' },
-        },
+// ─── AUTH LOGIC ────────────────────────────────────────────────────
+let currentUser = null;
+
+async function checkAuth() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = '/static/login.html';
+        return;
+    }
+    currentUser = await api.getMe();
+    if (!currentUser) {
+        localStorage.removeItem('token');
+        window.location.href = '/static/login.html';
+        return;
+    }
+    setupRoleBasedUI(currentUser);
+}
+
+function setupRoleBasedUI(user) {
+    console.log('User Role:', user.role);
+
+    // Update user avatar
+    const avatar = document.querySelector('.user-avatar');
+    if (avatar) {
+        avatar.textContent = user.username ? user.username.substring(0, 2).toUpperCase() : 'U';
+        avatar.title = `${user.username} (${user.role})`;
+    }
+
+    if (user.role === 'public') {
+        // Hide Alert Feeds and Repair Lists
+        document.querySelectorAll('.alerts-feed').forEach(el => {
+            const card = el.closest('.card');
+            if (card) card.style.display = 'none';
+        });
+        document.querySelectorAll('.repair-list').forEach(el => {
+            const card = el.closest('.card');
+            if (card) card.style.display = 'none';
+        });
+
+        // Show Complaint Form
+        const formContainer = document.getElementById('complaint-form-container');
+        if (formContainer) formContainer.style.display = 'block';
+        setupComplaintForm();
+
+    } else if (user.role === 'authority') {
+        // Show Complaint List
+        const listContainer = document.getElementById('complaint-list-container');
+        if (listContainer) listContainer.style.display = 'block';
+        loadComplaints();
+    }
+
+    // Logout Handler
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            localStorage.removeItem('token');
+            window.location.href = '/static/login.html';
+        });
+    }
+}
+
+async function loadComplaints() {
+    const complaints = await api.getComplaints();
+    if (complaints) renderComplaintsTable(complaints);
+}
+
+function renderComplaintsTable(complaints) {
+    const tbody = document.getElementById('complaints-tbody');
+    if (!tbody) return;
+    tbody.innerHTML = complaints.map(c => `
+        <tr>
+            <td style="text-transform:capitalize">${c.type}</td>
+            <td>${c.area || '-'}</td>
+            <td>${c.description}</td>
+            <td>${c.user_id}</td>
+            <td style="font-family:var(--font-mono)">${new Date(c.timestamp).toLocaleString()}</td>
+            <td><span class="status-chip ${c.status === 'open' ? 'warning' : 'online'}">${c.status}</span></td>
+        </tr>
+    `).join('');
+}
+
+function setupComplaintForm() {
+    // Populate sensors
+    api.getNodes().then(nodes => {
+        const select = document.getElementById('complaint-area');
+        if (select && nodes) {
+            select.innerHTML = '<option value="">Select Sensor...</option>' +
+                nodes.map(n => `<option value="${n.name}">${n.name} (${n.id})</option>`).join('');
+        }
     });
+
+    // Toggle area dropdown logic
+    const typeSelect = document.getElementById('complaint-type');
+    const areaGroup = document.getElementById('area-group');
+    if (typeSelect && areaGroup) {
+        typeSelect.addEventListener('change', () => {
+            if (typeSelect.value === 'drainage') areaGroup.style.display = 'block';
+            else areaGroup.style.display = 'none';
+        });
+        typeSelect.dispatchEvent(new Event('change'));
+    }
+
+    const form = document.getElementById('complaint-form');
+    if (form) {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const type = document.getElementById('complaint-type').value;
+            const area = document.getElementById('complaint-area').value;
+            const description = document.getElementById('complaint-desc').value;
+
+            const res = await api.postComplaint({ type, area, description });
+            if (res) {
+                alert('Complaint submitted successfully!');
+                form.reset();
+                if (typeSelect) typeSelect.dispatchEvent(new Event('change'));
+            } else {
+                alert('Failed to submit complaint.');
+            }
+        });
+    }
 }
 
 function renderStressSensorCharts(data) {
@@ -1154,3 +1237,120 @@ function renderBridgeTable(bridges) {
         `;
     }).join('');
 }
+
+// ─── SEARCH FUNCTIONALITY ───────────────────────────────────────────
+function initSearch() {
+    const searchInput = document.getElementById('global-search');
+    if (!searchInput) return;
+
+    // Create dropdown container
+    const dropdown = document.createElement('div');
+    dropdown.className = 'search-dropdown';
+    dropdown.id = 'search-results';
+    dropdown.style.display = 'none';
+    searchInput.parentNode.appendChild(dropdown);
+
+    searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase().trim();
+        if (query.length < 2) {
+            dropdown.style.display = 'none';
+            return;
+        }
+        performSearch(query, dropdown);
+    });
+
+    // Close on click outside
+    document.addEventListener('click', (e) => {
+        if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.style.display = 'none';
+        }
+    });
+
+    // Open if clicking back into input with value
+    searchInput.addEventListener('focus', () => {
+        if (searchInput.value.trim().length >= 2) {
+            dropdown.style.display = 'block';
+        }
+    });
+}
+
+function performSearch(query, dropdown) {
+    // Filter items
+    const results = searchableItems.filter(item => {
+        const matchLabel = item.label && item.label.toLowerCase().includes(query);
+        const matchSub = item.sub && item.sub.toLowerCase().includes(query);
+        const matchId = item.id && String(item.id).toLowerCase().includes(query);
+        return matchLabel || matchSub || matchId;
+    }).slice(0, 8); // Limit to 8 results
+
+    if (results.length === 0) {
+        dropdown.innerHTML = '<div class="search-no-results">No results found</div>';
+        dropdown.style.display = 'block';
+        return;
+    }
+
+    dropdown.innerHTML = results.map(item => {
+        let icon = 'search';
+        if (item.type === 'node') icon = 'map-pin';
+        if (item.type === 'alert') icon = 'alert-triangle';
+        if (item.type === 'page') icon = 'layout';
+
+        return `
+            <div class="search-result-item" onclick="handleSearchResultClick('${item.type}', '${item.id}')">
+                <div class="result-icon"><i data-lucide="${icon}"></i></div>
+                <div class="result-content">
+                    <div class="result-title">${item.label}</div>
+                    <div class="result-sub">${item.sub}</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    dropdown.style.display = 'block';
+    initLucideIcons();
+}
+
+window.handleSearchResultClick = function (type, id) {
+    const dropdown = document.getElementById('search-results');
+    if (dropdown) dropdown.style.display = 'none';
+    document.getElementById('global-search').value = '';
+
+    if (type === 'page') {
+        navigateToPage(id);
+    } else if (type === 'node') {
+        navigateToPage('drainage');
+        // Ideally scroll to table row
+        setTimeout(() => {
+            // Highlight table row if exists
+            // We need to wait for table render if not already rendered? 
+            // navigateToPage calls loadAllData/etc if needed but we might be already there.
+
+            // Try to find the row text
+            const rows = document.querySelectorAll('#drainage-tbody tr');
+            let found = false;
+            rows.forEach(r => {
+                if (r.innerHTML.includes(id)) {
+                    r.style.transition = 'background-color 0.5s';
+                    r.style.backgroundColor = 'rgba(6, 214, 160, 0.2)';
+                    r.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    setTimeout(() => r.style.backgroundColor = '', 2000);
+                    found = true;
+                }
+            });
+
+            if (!found) {
+                // Check map markers
+                const popup = mapMarkers.find(m => m.getPopup().getContent().includes(id));
+                if (popup) {
+                    popup.openPopup();
+                    cityMap.setView(popup.getLatLng(), 14);
+                }
+            }
+        }, 500);
+    } else if (type === 'alert') {
+        navigateToPage('command-center');
+        setTimeout(() => {
+            document.getElementById('alerts-feed').scrollIntoView({ behavior: 'smooth' });
+        }, 500);
+    }
+};
