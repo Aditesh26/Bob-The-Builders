@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register — Yantra Central</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: radial-gradient(circle at bottom left, #1a2540 0%, #060a14 60%);
+        }
+
+        .auth-card {
+            width: 100%;
+            max-width: 420px;
+            padding: 32px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        .brand {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .brand-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--cyan), var(--blue));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin: 0 auto 12px;
+            box-shadow: var(--cyan-glow);
+        }
+
+        .brand-name {
+            font-weight: 800;
+            font-size: 1.2rem;
+            background: linear-gradient(135deg, var(--cyan), var(--blue));
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        .form-input,
+        .form-select {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus,
+        .form-select:focus {
+            border-color: var(--cyan);
+            box-shadow: 0 0 0 2px var(--cyan-dim);
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 12px;
+            background: var(--cyan);
+            color: var(--bg-primary);
+            border: none;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 8px;
+        }
+
+        .btn-primary:hover {
+            box-shadow: var(--cyan-glow);
+            transform: translateY(-1px);
+        }
+
+        .auth-links {
+            margin-top: 16px;
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .auth-links a {
+            color: var(--cyan);
+            text-decoration: none;
+        }
+
+        .error-msg {
+            color: var(--red);
+            font-size: 0.85rem;
+            margin-bottom: 12px;
+            display: none;
+            text-align: center;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="auth-card">
+        <div class="brand">
+            <div class="brand-icon">⚡</div>
+            <div class="brand-name">YANTRA CENTRAL</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Create Account</div>
+        </div>
+        <div class="error-msg" id="error-msg">Registration failed</div>
+        <form id="register-form">
+            <div class="form-group">
+                <label class="form-label">Username</label>
+                <input type="text" class="form-input" id="username" required placeholder="Choose a username">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <input type="password" class="form-input" id="password" required placeholder="••••••••">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Role</label>
+                <select class="form-select" id="role" onchange="toggleFields()">
+                    <option value="public" selected>Public User</option>
+                    <option value="authority">Authority / Admin</option>
+                </select>
+            </div>
+            <div class="form-group" id="name-group">
+                <label class="form-label">Full Name</label>
+                <input type="text" class="form-input" id="name" placeholder="John Doe">
+            </div>
+            <div class="form-group hidden" id="org-group">
+                <label class="form-label">Organization Name</label>
+                <input type="text" class="form-input" id="organization" placeholder="City Council / Department">
+            </div>
+            <button type="submit" class="btn-primary">Register</button>
+        </form>
+        <div class="auth-links">
+            Already have an account? <a href="/static/login.html">Sign In</a>
+        </div>
+    </div>
+
+    <script>
+        function toggleFields() {
+            const role = document.getElementById('role').value;
+            const nameGroup = document.getElementById('name-group');
+            const orgGroup = document.getElementById('org-group');
+
+            if (role === 'authority') {
+                nameGroup.classList.add('hidden');
+                orgGroup.classList.remove('hidden');
+                document.getElementById('organization').required = true;
+                document.getElementById('name').required = false;
+            } else {
+                nameGroup.classList.remove('hidden');
+                orgGroup.classList.add('hidden');
+                document.getElementById('organization').required = false;
+                document.getElementById('name').required = true;
+            }
+        }
+
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const role = document.getElementById('role').value;
+            const name = document.getElementById('name').value;
+            const organization = document.getElementById('organization').value;
+            const errorMsg = document.getElementById('error-msg');
+
+            errorMsg.style.display = 'none';
+
+            const payload = {
+                username,
+                password,
+                role,
+                ...(role === 'public' ? { name } : { organization })
+            };
+
+            try {
+                const response = await fetch('/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    localStorage.setItem('token', data.access_token);
+                    window.location.href = '/';
+                } else {
+                    const err = await response.json();
+                    errorMsg.textContent = err.detail || 'Registration failed';
+                    errorMsg.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Registration error:', error);
+                errorMsg.textContent = 'Connection failed';
+                errorMsg.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+
+</html>
