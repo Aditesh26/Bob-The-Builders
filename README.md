@@ -27,7 +27,7 @@ Yantra Central is an AI-powered urban infrastructure health monitoring system de
 - **Machine Learning**: 
   - `scikit-learn` (RandomForestRegressor for stress prediction)
   - `pandas`, `numpy` for data processing
-- **Database**: MongoDB (referenced in data ingestion modules)
+- **Database**: MongoDB (used for storing sensor readings)
 
 ### Frontend
 - **Core**: HTML5, CSS3 (Custom variables, Responsive Grid), Vanilla JavaScript (ES6+)
@@ -39,7 +39,6 @@ Yantra Central is an AI-powered urban infrastructure health monitoring system de
 
 ## Project Structure
 
-```
 ├── app/
 │   ├── main.py              # Main FastAPI application & ML logic
 │   ├── static/              # Frontend Assets
@@ -47,14 +46,10 @@ Yantra Central is an AI-powered urban infrastructure health monitoring system de
 │   │   ├── css/style.css    # Custom styling
 │   │   └── js/dashboard.js  # Frontend logic & API integration
 │   ├── models/              # Saved ML models (.pkl files)
-│   └── requirements.txt     # (Note: Check root or aditesh for dependencies)
-├── aditesh/                 # Data Ingestion & Database modules
-│   ├── main.py              # Simple data logging service
-│   ├── database.py          # MongoDB connection handler
-│   └── requirements.txt     # Python dependencies
+│   └── requirements.txt     # Python dependencies for the app
 ├── *.pkl                    # Root level ML model artifacts (backups/training)
+├── verify_db.py             # Script to verify MongoDB connection and insert test data
 └── README.md                # Project Documentation
-```
 
 ##  Setup & Installation
 
@@ -98,5 +93,6 @@ The system uses a **Random Forest Regressor** to calculate a "Stress Score" for 
 - **GET /api/stress-score**: ML-predicted stress index and history.
 - **GET /api/road-health**: Mocked data for road segment conditions.
 - **GET /api/bridge-health**: Mocked data for bridge structural analysis.
+- **POST /reading**: Endpoint to receive sensor data (rainfall, water_level, soil_moisture).
 
 ---
